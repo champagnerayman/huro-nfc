@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huro NFC — Claim Your Business Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #09090b;
+    --surface: #111113;
+    --surface2: #1a1a1d;
+    --border: #27272a;
+    --border2: #3f3f46;
+    --nfc: #00d4ff;
+    --nfc2: #0ea5e9;
+    --glow: rgba(0,212,255,0.15);
+    --text: #e4e4e7;
+    --muted: #71717a;
+    --white: #ffffff;
+    --error: #f87171;
+    --error-bg: rgba(248,113,113,0.08);
+    --error-bd: rgba(248,113,113,0.25);
+    --success: #34d399;
+    --success-bg: rgba(52,211,153,0.08);
+    --success-bd: rgba(52,211,153,0.25);
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events:none; z-index:0;
+  }
+
+  body::after {
+    content:'';
+    position:fixed;
+    top:-300px; left:50%; transform:translateX(-50%);
+    width:800px; height:500px;
+    background: radial-gradient(ellipse, rgba(0,212,255,0.08), transparent 65%);
+    pointer-events:none; z-index:0;
+  }
+
+  .page {
+    position:relative; z-index:1;
+    max-width:660px; margin:0 auto;
+    padding:3rem 1.25rem 5rem;
+  }
+
+  /* HEADER */
+  .header { text-align:center; margin-bottom:2.5rem; animation: up 0.6s ease both; }
+
+  .chip-icon {
+    width:72px; height:72px; margin:0 auto 1.5rem;
+    background: linear-gradient(145deg,#161618,#1e1e21);
+    border:1px solid rgba(0,212,255,0.25); border-radius:18px;
+    display:flex; align-items:center; justify-content:center;
+    animation: chipPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes chipPulse {
+    0%,100%{ box-shadow: 0 0 0 1px rgba(0,212,255,0.08), 0 0 30px rgba(0,212,255,0.1); }
+    50%{ box-shadow: 0 0 0 1px rgba(0,212,255,0.15), 0 0 50px rgba(0,212,255,0.22); }
+  }
+
+  .header h1 { font-family:'Syne',sans-serif; font-size:clamp(1.8rem,5vw,2.4rem); font-weight:800; color:var(--white); letter-spacing:-0.02em; line-height:1.15; margin-bottom:0.6rem; }
+  .header h1 em { color:var(--nfc); font-style:normal; }
+  .header p { font-size:0.88rem; color:var(--muted); line-height:1.75; max-width:420px; margin:0 auto; }
+
+  /* STEPS */
+  .steps { display:flex; align-items:center; margin-bottom:2rem; animation: up 0.6s ease 0.05s both; }
+  .step { display:flex; align-items:center; gap:0.5rem; flex:1; }
+  .step-dot {
+    width:28px; height:28px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:700;
+    border:1.5px solid var(--border2); color:var(--muted);
+    transition: all 0.4s ease;
+  }
+  .step-dot.active { border-color:var(--nfc); color:var(--nfc); background:rgba(0,212,255,0.1); box-shadow:0 0 12px rgba(0,212,255,0.2); }
+  .step-dot.done { border-color:var(--success); background:var(--success); color:#000; }
+  .step-label { font-size:0.72rem; color:var(--muted); font-weight:500; transition:color 0.4s; }
+  .step.active .step-label { color:var(--text); }
+  .step.done .step-label { color:var(--success); }
+  .step-line { flex:1; height:1px; background:var(--border); margin:0 0.5rem; transition:background 0.4s; }
+  .step-line.done { background:var(--success); }
+
+  /* GATE CARD */
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; overflow:hidden; margin-bottom:1.25rem;
+    animation: up 0.6s ease both;
+  }
+
+  .card-head {
+    padding:1.1rem 1.5rem; background:var(--surface2);
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:0.75rem;
+  }
+
+  .card-num {
+    width:24px; height:24px; border-radius:6px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-size:0.68rem; font-weight:700;
+    background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2); color:var(--nfc);
+  }
+
+  .card-title { font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--white); }
+  .card-body { padding:1.5rem; display:flex; flex-direction:column; gap:1.1rem; }
+
+  /* CODE INPUT */
+  .code-wrap { display:flex; gap:0.75rem; }
+  .code-field-wrap { flex:1; position:relative; }
+  .code-pre {
+    position:absolute; left:1rem; top:50%; transform:translateY(-50%);
+    font-family:'Syne',sans-serif; font-size:1rem; font-weight:800;
+    color:var(--nfc); pointer-events:none; user-select:none;
+  }
+
+  #claimCode {
+    width:100%; background:var(--bg);
+    border:1.5px solid var(--border); border-radius:10px;
+    color:var(--white); font-family:'Syne',sans-serif;
+    font-size:1.15rem; font-weight:800; letter-spacing:0.14em;
+    padding:0.9rem 1rem 0.9rem 6.2rem;
+    outline:none; text-transform:uppercase;
+    transition:border-color 0.2s, box-shadow 0.2s;
+  }
+
+  #claimCode::placeholder { color:#2e2e32; font-weight:400; letter-spacing:0.05em; font-size:0.9rem; }
+  #claimCode:focus { border-color:var(--nfc2); box-shadow:0 0 0 3px var(--glow); }
+  #claimCode.err { border-color:var(--error); box-shadow:0 0 0 3px rgba(248,113,113,0.1); }
+  #claimCode.ok  { border-color:var(--success); box-shadow:0 0 0 3px rgba(52,211,153,0.1); }
+
+  .verify-btn {
+    background:var(--nfc); color:#000; border:none; border-radius:10px;
+    padding:0.9rem 1.5rem;
+    font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:800;
+    letter-spacing:0.1em; text-transform:uppercase;
+    cursor:pointer; white-space:nowrap;
+    display:flex; align-items:center; gap:0.4rem;
+    transition:all 0.2s; box-shadow:0 0 20px rgba(0,212,255,0.2);
+  }
+
+  .verify-btn:hover { background:#22deff; box-shadow:0 0 30px rgba(0,212,255,0.35); transform:translateY(-1px); }
+  .verify-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
+
+  /* STATUS */
+  .status {
+    border-radius:8px; padding:0.8rem 1rem;
+    font-size:0.83rem; font-weight:500; line-height:1.5;
+    display:none; align-items:flex-start; gap:0.5rem;
+    animation:fadeIn 0.3s ease;
+  }
+  .status.err  { display:flex; background:var(--error-bg);   border:1px solid var(--error-bd);   color:var(--error); }
+  .status.ok   { display:flex; background:var(--success-bg); border:1px solid var(--success-bd); color:var(--success); }
+  .status.spin { display:flex; align-items:center; background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.15); color:var(--nfc); }
+
+  .spinner { width:14px; height:14px; border:2px solid rgba(0,212,255,0.2); border-top-color:var(--nfc); border-radius:50%; animation:rotate 0.7s linear infinite; flex-shrink:0; }
+  @keyframes rotate { to{transform:rotate(360deg)} }
+
+  /* FORM SECTION */
+  #formSection { display:none; }
+
+  .verified-banner {
+    display:flex; align-items:center; gap:0.75rem;
+    padding:0.9rem 1.2rem;
+    background:var(--success-bg); border:1px solid var(--success-bd);
+    border-radius:10px; margin-bottom:1.25rem;
+  }
+  .verified-banner strong { font-size:0.88rem; color:var(--success); display:block; margin-bottom:0.1rem; }
+  .verified-banner span { font-size:0.75rem; color:var(--muted); }
+  .code-badge {
+    margin-left:auto; font-family:'Syne',sans-serif; font-size:0.72rem; font-weight:800;
+    letter-spacing:0.1em; color:var(--nfc);
+    background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2);
+    padding:0.3rem 0.8rem; border-radius:6px; white-space:nowrap;
+  }
+
+  /* GOOGLE FORM WRAPPER */
+  .gform-wrap {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; overflow:hidden;
+  }
+
+  .gform-info {
+    padding:1rem 1.5rem;
+    background:var(--surface2); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:0.75rem;
+  }
+
+  .gform-info-icon { font-size:1.1rem; }
+  .gform-info-text { font-size:0.78rem; color:var(--muted); line-height:1.55; }
+  .gform-info-text strong { color:var(--text); display:block; margin-bottom:0.1rem; font-size:0.82rem; }
+
+  #googleForm {
+    width:100%;
+    height:2400px;
+    border:none;
+    display:block;
+    background:#fff;
+  }
+
+  /* FOOTER */
+  .footer { text-align:center; font-size:0.7rem; color:var(--muted); opacity:0.5; margin-top:2rem; }
+
+  /* ANIMATIONS */
+  @keyframes up { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+    40%{transform:translateX(7px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+  }
+
+  @media(max-width:480px){
+    .code-wrap { flex-direction:column; }
+    .verify-btn { width:100%; justify-content:center; }
+    #googleForm { height:2800px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="chip-icon">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <rect x="7" y="11" width="22" height="14" rx="2.5" stroke="#00d4ff" stroke-width="1.5"/>
+        <line x1="13" y1="11" x2="13" y2="25" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <line x1="18" y1="11" x2="18" y2="25" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <line x1="23" y1="11" x2="23" y2="25" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <path d="M3 14.5C3 14.5 5 18 3 21.5" stroke="#00d4ff" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+        <path d="M33 14.5C33 14.5 31 18 33 21.5" stroke="#00d4ff" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+      </svg>
+    </div>
+    <h1>Claim Your <em>Huro NFC</em><br>Business Card</h1>
+    <p>Congratulations on winning! Enter your unique claim code to unlock your registration form.</p>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step1">
+      <div class="step-dot active" id="dot1">1</div>
+      <div class="step-label">Verify Code</div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step" id="step2">
+      <div class="step-dot" id="dot2">2</div>
+      <div class="step-label">Fill In Details</div>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step" id="step3">
+      <div class="step-dot" id="dot3">3</div>
+      <div class="step-label">Done!</div>
+    </div>
+  </div>
+
+  <!-- GATE -->
+  <div class="card" id="gateSection">
+    <div class="card-head">
+      <div class="card-num">🔐</div>
+      <div class="card-title">Step 1 — Enter Your Claim Code</div>
+    </div>
+    <div class="card-body">
+      <p style="font-size:0.82rem;color:var(--muted);line-height:1.65;">
+        Your unique <strong style="color:var(--text)">HURO-XXXX</strong> code was sent to you personally.
+        Each code can only be used <strong style="color:var(--text)">once</strong>.
+      </p>
+
+      <div class="code-wrap">
+        <div class="code-field-wrap">
+          <span class="code-pre">HURO-</span>
+          <input type="text" id="claimCode" maxlength="4" placeholder="0000" autocomplete="off" spellcheck="false">
+        </div>
+        <button class="verify-btn" id="verifyBtn" onclick="verifyCode()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Verify
+        </button>
+      </div>
+
+      <div class="status" id="codeStatus"></div>
+
+      <p style="font-size:0.74rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:1rem;">
+        🔒 Don't have a code? This form is exclusively for Huro NFC lucky draw winners.
+        Please contact us if you believe you should have received a code.
+      </p>
+    </div>
+  </div>
+
+  <!-- FORM SECTION (shown after code verified) -->
+  <div id="formSection">
+
+    <div class="verified-banner">
+      <span style="font-size:1.4rem">✅</span>
+      <div>
+        <strong>Code Verified Successfully!</strong>
+        <span>Please complete the registration form below. All responses save directly to our system.</span>
+      </div>
+      <div class="code-badge" id="codeBadge"></div>
+    </div>
+
+    <div class="gform-wrap">
+      <div class="gform-info">
+        <span class="gform-info-icon">📋</span>
+        <div class="gform-info-text">
+          <strong>Step 2 — Complete Your Registration</strong>
+          Fill in all your details below. Your information saves automatically to our Google Sheet when you click Submit at the bottom.
+        </div>
+      </div>
+      <iframe
+        id="googleForm"
+        src=""
+        title="Huro NFC Registration Form"
+        allowfullscreen>
+      </iframe>
+    </div>
+
+  </div>
+
+  <div class="footer">🔒 Huro NFC · Each claim code is valid for one submission only</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// 25 CLAIM CODES — all built in, no server
+// ══════════════════════════════════════════
+var CODES = {
+  'HURO-4827': 'AVAILABLE',
+  'HURO-9153': 'AVAILABLE',
+  'HURO-6341': 'AVAILABLE',
+  'HURO-7782': 'AVAILABLE',
+  'HURO-2019': 'AVAILABLE',
+  'HURO-5564': 'AVAILABLE',
+  'HURO-8830': 'AVAILABLE',
+  'HURO-3397': 'AVAILABLE',
+  'HURO-1246': 'AVAILABLE',
+  'HURO-6078': 'AVAILABLE',
+  'HURO-4415': 'AVAILABLE',
+  'HURO-9902': 'AVAILABLE',
+  'HURO-7631': 'AVAILABLE',
+  'HURO-2284': 'AVAILABLE',
+  'HURO-5509': 'AVAILABLE',
+  'HURO-8873': 'AVAILABLE',
+  'HURO-3160': 'AVAILABLE',
+  'HURO-6427': 'AVAILABLE',
+  'HURO-1895': 'AVAILABLE',
+  'HURO-7043': 'AVAILABLE',
+  'HURO-4768': 'AVAILABLE',
+  'HURO-9321': 'AVAILABLE',
+  'HURO-2657': 'AVAILABLE',
+  'HURO-5194': 'AVAILABLE',
+  'HURO-8436': 'AVAILABLE'
+};
+
+// Google Form URL — embedded version
+var FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeKfc2qQeOzSg6tw-gqZhpr6z8zGTH-qtVW8rrGcERLbGlpLg/viewform?embedded=true';
+
+// Load claimed codes from localStorage
+function loadClaimed() {
+  try {
+    var saved = localStorage.getItem('huroClaimed');
+    if (saved) {
+      JSON.parse(saved).forEach(function(c) {
+        if (CODES[c] !== undefined) CODES[c] = 'CLAIMED';
+      });
+    }
+  } catch(e) {}
+}
+
+function saveClaimed(code) {
+  try {
+    var saved = localStorage.getItem('huroClaimed');
+    var list = saved ? JSON.parse(saved) : [];
+    if (!list.includes(code)) list.push(code);
+    localStorage.setItem('huroClaimed', JSON.stringify(list));
+  } catch(e) {}
+}
+
+loadClaimed();
+
+// Input — numbers only
+var inp = document.getElementById('claimCode');
+inp.addEventListener('input', function() {
+  this.value = this.value.replace(/[^0-9]/g, '');
+  clearStatus();
+});
+inp.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') verifyCode();
+});
+
+function clearStatus() {
+  var s = document.getElementById('codeStatus');
+  s.className = 'status'; s.innerHTML = '';
+  inp.className = '';
+}
+
+function setStatus(type, msg) {
+  var s = document.getElementById('codeStatus');
+  s.className = 'status ' + type;
+  if (type === 'spin') s.innerHTML = '<div class="spinner"></div><span>' + msg + '</span>';
+  else if (type === 'err') s.innerHTML = '<span>⚠</span><span>' + msg + '</span>';
+  else s.innerHTML = '<span>✓</span><span>' + msg + '</span>';
+}
+
+function verifyCode() {
+  var digits = inp.value.trim();
+
+  if (digits.length < 4) {
+    setStatus('err', 'Please enter the 4 digits of your HURO code.');
+    inp.className = 'err';
+    shake(); return;
+  }
+
+  var full = 'HURO-' + digits;
+  var btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  setStatus('spin', 'Verifying your code…');
+
+  setTimeout(function() {
+    btn.disabled = false;
+
+    if (CODES[full] === undefined) {
+      setStatus('err', '❌ Invalid code. Please check your code and try again.');
+      inp.className = 'err'; shake(); return;
+    }
+
+    if (CODES[full] === 'CLAIMED') {
+      setStatus('err', '🔒 This code has already been claimed. Please contact us if you think this is an error.');
+      inp.className = 'err'; shake(); return;
+    }
+
+    // ✅ Valid — mark as claimed
+    CODES[full] = 'CLAIMED';
+    saveClaimed(full);
+
+    setStatus('ok', '✅ Code verified! Please scroll down and complete the form.');
+    inp.className = 'ok';
+
+    // Update steps
+    document.getElementById('dot1').className = 'step-dot done';
+    document.getElementById('dot1').textContent = '✓';
+    document.getElementById('step1').className = 'step done';
+    document.getElementById('line1').className = 'step-line done';
+    document.getElementById('dot2').className = 'step-dot active';
+    document.getElementById('step2').className = 'step active';
+
+    // Show Google Form
+    setTimeout(function() {
+      document.getElementById('codeBadge').textContent = full;
+      document.getElementById('googleForm').src = FORM_URL;
+      document.getElementById('formSection').style.display = 'block';
+      document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Mark step 3 done when iframe loads (approximate — Google Form submitted)
+      document.getElementById('googleForm').addEventListener('load', function() {
+        document.getElementById('dot2').className = 'step-dot done';
+        document.getElementById('dot2').textContent = '✓';
+        document.getElementById('step2').className = 'step done';
+        document.getElementById('line2').className = 'step-line done';
+        document.getElementById('dot3').className = 'step-dot active';
+        document.getElementById('step3').className = 'step active';
+      });
+
+    }, 800);
+
+  }, 900);
+}
+
+function shake() {
+  inp.style.animation = 'none';
+  inp.offsetHeight;
+  inp.style.animation = 'shake 0.4s ease';
+}
+</script>
+</body>
+</html>
